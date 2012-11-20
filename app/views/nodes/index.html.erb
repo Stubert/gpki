@@ -1,0 +1,104 @@
+<% require 'digest/sha1' %>
+<h1>Merkle Hash Tree</h1>
+<% if Node.all.length > 7 %> 
+	<% trim_tree %>
+<% end %>
+
+<% sharr = [] #Array of Shas %>
+<% narr2 = [] #array of nodes, level 2 %>
+<% narr1 = [] #array of nodes, level 1 %>
+<% narr0 = [] #array of nodes, level 0 %>
+
+<% @leafs = Leaf.all %>
+
+<%# for each leaf, make a node with that leaf's hash, make child Nil (these are the leaves) %>
+<% @leafs.each do |leaf| %>
+
+		<% sharr << leaf.sha %>
+		<% @node = Node.new %>
+		<% @node.sha = leaf.sha %>
+		<% @node.l_child = nil %>
+		<% @node.r_child = nil %>
+		<% @node.save %>
+		<% narr2 << @node %>
+<%end %>
+		<% @node.save %>
+	
+		<%# Now that leaves have begotten nodes, leaf nodes make parents %>
+		<%# Divide nodes into left and right %>
+	
+		<% narr2.length.times do |i| %>
+			<% if i % 2 != 0 %>
+				<% narr1 << narr2[i] %>
+			<% else %>
+				<% narr1 << narr2[i] %>
+			<% end %>
+			<% if narr1[1] %>
+				<%# create new parent node %>
+				<% @node = Node.new %>
+				<% @node.l_child = narr1[0].id %>
+				<% @node.r_child = narr1[1].id %>
+				<% @node.sha = Digest::SHA1.hexdigest "#{narr1[0].sha}/#{narr1[1].sha}" %>
+				<% @node.save %>
+				<%# Update children with new parent id %>
+				<% narr1[0].parent = @node.id %>
+				<% narr1[0].save %>
+				<% narr1[1].parent = @node.id %>
+				<% narr1[1].save %>
+				<% narr1=[] %>
+				<% narr0 << @node %>
+				<%# Create Root %>
+				<% if narr0[1] %>
+				<% @node = Node.new %>
+				<% @node.l_child = narr0[0].id %>
+				<% @node.r_child = narr0[1].id %>
+				<% @node.sha = Digest::SHA1.hexdigest "#{narr0[0].sha}/#{narr0[1].sha}" %>
+				<% @node.save %>
+				<% narr0[0].parent = @node.id %>
+				<% narr0[0].save %>
+				<% narr0[1].parent = @node.id %>
+				<% narr0[1].save %>
+				<% narr0=[] %>
+				<% end %>
+			<% end %>
+		<% end %> 
+
+
+
+<%# To manage tree.  Kludgy hack. %>
+<% def trim_tree %>
+	<% @nodes = Node.all %>
+	<% @nodes.each do |node| %>
+		<% node.destroy %>
+	<% end %>
+<% end %>
+
+
+<table>
+  <tr>
+    <th>Parent</th>
+    <th>L child</th>
+    <th>R child</th>
+    <th>Sha</th>
+    <th>Position</th>
+    <th></th>
+    <th></th>
+  </tr>
+
+<% @nodes.each do |node| %>
+  <tr>
+    <td><%= node.parent %></td>
+    <td><%= node.l_child %></td>
+    <td><%= node.r_child %></td>
+    <td><%= node.sha %></td>
+
+    <td><%= link_to 'Show', node %></td>
+    <td><%= link_to 'Edit', edit_node_path(node) %></td>
+    <td><%= link_to 'Destroy', node, method: :delete, data: { confirm: 'Are you sure?' } %></td>
+  </tr>
+<% end %>
+</table>
+
+<br />
+
+<%= link_to 'New Node', new_node_path %>
