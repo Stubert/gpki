@@ -1,4 +1,11 @@
 <% require 'digest/sha1' %>
+<% def trim_tree %>
+	<% @nodes = Node.all %>
+	<% @nodes.each do |node| %>
+		<% node.destroy %>
+	<% end %>
+<% end %>
+
 <h1>Merkle Hash Tree</h1>
 <% if Node.all.length > 7 %> 
 	<% trim_tree %>
@@ -66,12 +73,6 @@
 
 
 <%# To manage tree.  Kludgy hack. %>
-<% def trim_tree %>
-	<% @nodes = Node.all %>
-	<% @nodes.each do |node| %>
-		<% node.destroy %>
-	<% end %>
-<% end %>
 
 
 <table>
